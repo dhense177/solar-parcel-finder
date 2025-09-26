@@ -11,57 +11,22 @@ A web application for finding suitable parcels near substations for solar farms,
 - Download results as CSV or HTML map
 - Statistics and metrics
 
-## Local Development
+## Methods
 
-1. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+- Parcels are filtered by their size (in acres) and their distance to nearest substation (in miles), the values of which are user specified
+- Further filtering to reduce the set of candidate parcels
+    - Shape is not very long and thin
+    - Area of parcel is not made up mostly of forests or wetlands
 
-2. Run the app:
-```bash
-streamlit run app.py
-```
+## Data Sources
 
-## Deployment
+- New York State boundaries (https://gis.ny.gov/parcels)
+- New York State county boundaries (https://gis.ny.gov/civil-boundaries)
+- Solar Sites (https://www.transitionzero.org/products/solar-asset-mapper)
+- New York State Parcels (https://gis.ny.gov/parcels)
+- Overture Maps Geographic Data (https://docs.overturemaps.org/guides/)
 
-### Option 1: Vercel
 
-1. Install Vercel CLI:
-```bash
-npm i -g vercel
-```
+## App Deployment
 
-2. Deploy:
-```bash
-vercel
-```
-
-3. Add environment variables in Vercel dashboard:
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-
-### Option 2: S3 + CloudFront
-
-1. Build static files:
-```bash
-streamlit build app.py
-```
-
-2. Upload to S3 bucket
-3. Configure CloudFront distribution
-4. Set up AWS credentials
-
-## Data Requirements
-
-The app expects the following data structure:
-- `data/parcel_data/ny_parcels/{county}/*.parquet` - Parcel data
-- S3 bucket with infrastructure, land use, and land data
-
-## Configuration
-
-Update the file paths in `app.py` to match your data structure:
-- `parcel_files`
-- `infra_files` 
-- `landuse_files`
-- `land_files`
+Deployed as a streamlit app at the following address: https://solar-parcel-finder-nda2ycxzbzjakzx3zuougd.streamlit.app/
