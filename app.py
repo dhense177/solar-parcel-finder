@@ -391,10 +391,10 @@ counties = get_counties()
 county = st.sidebar.selectbox("📍 Select County", counties)
 
 # Distance input
-distance = st.sidebar.slider("📏 Distance from infrastructure (miles)", 1, 10, 3)
+distance = st.sidebar.slider("📏 Distance from infrastructure (miles)", 1, 5, 3)
 
 # Minimum parcel size
-min_parcel_size = st.sidebar.slider("📐 Minimum parcel size (acres)", 1, 100, 10)
+min_parcel_size = st.sidebar.slider("📐 Minimum parcel size (acres)", 1, 100, 20)
 
 # Search button
 search_button = st.sidebar.button("Find Parcels", type="primary")
