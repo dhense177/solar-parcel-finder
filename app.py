@@ -354,16 +354,16 @@ def init_duckdb():
     con.execute("SET s3_region = 'eu-north-1'")
     
     # Configure S3 credentials
-    access_key = st.secrets["aws"]["aws_access_key_id"]
-    secret_key = st.secrets["aws"]["aws_secret_access_key"]
-    region = st.secrets["aws"]["aws_region"]
+    # access_key = st.secrets["aws"]["aws_access_key_id"]
+    # secret_key = st.secrets["aws"]["aws_secret_access_key"]
+    # region = st.secrets["aws"]["aws_region"]
 
     # Get credentials via boto3
-    # session = boto3.Session()
-    # credentials = session.get_credentials()
-    # if credentials:
-    #     access_key = credentials.access_key
-    #     secret_key = credentials.secret_key
+    session = boto3.Session()
+    credentials = session.get_credentials()
+    if credentials:
+        access_key = credentials.access_key
+        secret_key = credentials.secret_key
 
     con.execute(f"SET s3_access_key_id = '{access_key}'")
     con.execute(f"SET s3_secret_access_key = '{secret_key}'")
@@ -436,20 +436,6 @@ if search_button:
                     FROM read_parquet('{infra_files}/{county}/*.parquet') 
                     WHERE class='substation'
                 ),
-                -- landuse AS (
-                --    SELECT 
-                --    class,
-                --    ST_GeomFromText(geometry_4326) AS geometry
-                --    FROM read_parquet('{landuse_files}/{county}/*.parquet')
-                --    WHERE class IN ('industrial','grass','meadow', 'farmland', 'brownfield')
-                -- ),
-                --land AS (
-                --    SELECT
-                --    class,
-                --    ST_GeomFromText(geometry_4326) AS geometry
-                --    FROM read_parquet('{land_files}/{county}/*.parquet')
-                --    WHERE class IN ('grass', 'grassland', 'meadow', 'farmland', 'brownfield')
-                -- ),
                 land_cover AS (
                     SELECT
                     class,
@@ -479,11 +465,11 @@ if search_button:
                 AND ST_DWithin(p.geometry, i.geometry, {distance_meters})
                 JOIN land_cover AS l
                 ON ST_Intersects(ST_GeomFromText(p.geometry_display), l.geometry)
-                -- JOIN landuse AS lu
-                -- ON ST_Intersects(ST_GeomFromText(p.geometry_display), lu.geometry)
                  WHERE p.area>{min_parcel_size_meters}
+
                  -- Remove long, skinny parcels
                  AND ST_Area(p.geometry) / (ST_Perimeter(p.geometry) * ST_Perimeter(p.geometry) / 16) > 0.3
+
                  -- Remove parcels where >50% is forest or wetland
                  AND (
                      SELECT COALESCE(SUM(ST_Area(ST_Intersection(ST_GeomFromText(p.geometry_display), lcr.geometry))), 0)
@@ -503,14 +489,6 @@ if search_button:
                 # Convert to GeoDataFrame
                 df['geometry'] = df['parcel_geometry'].apply(wkt.loads)
                 gdf = gpd.GeoDataFrame(df, geometry='geometry', crs='EPSG:4326')
-                
-                # Get county boundary
-                # try:
-                # # First, let's check what columns are available
-                # debug_query = """
-                # SELECT * FROM read_parquet('data/boundaries_data/NYS_counties.parquet') LIMIT 1
-                # """
-                # debug_df = con.execute(debug_query).fetchdf()
                 
                 
                 # Try different approaches for geometry conversion
@@ -605,19 +583,17 @@ if search_button:
                                 }
                                 return color_map.get(landuse_type, '#CCCCCC')  # Default gray
                             
-                            # Add landuse polygons to map with individual popups
-                            for idx, row in landuse_gdf.iterrows():
-                                folium.GeoJson(
-                                    row.geometry,
-                                    style_function=lambda x, class_type=row['class']: {
-                                        'fillColor': get_landuse_color({'properties': {'class': class_type}}),
-                                        'color': 'transparent',
-                                        'weight': 0,
-                                        'opacity': 0.6,
-                                        'fillOpacity': 0.3
-                                    },
-                                    popup=folium.Popup(f"Landuse Type: {row['class']}", parse_html=False)
-                                ).add_to(m)
+                            # Add landuse polygons to map
+                            folium.GeoJson(
+                                landuse_gdf,
+                                style_function=lambda x: {
+                                    'fillColor': get_landuse_color(x),
+                                    'color': 'transparent',
+                                    'weight': 0,
+                                    'opacity': 0.6,
+                                    'fillOpacity': 0.3
+                                }
+                            ).add_to(m)
                             
                         else:
                             st.info(f"No landuse data found within {county} County")
@@ -685,19 +661,17 @@ if search_button:
                                 }
                                 return color_map.get(land_cover_type, '#CCCCCC')  # Default gray
                             
-                            # Add land_cover polygons to map with individual popups
-                            for idx, row in land_cover_gdf.iterrows():
-                                folium.GeoJson(
-                                    row.geometry,
-                                    style_function=lambda x, class_type=row['class']: {
-                                        'fillColor': get_land_cover_color({'properties': {'class': class_type}}),
-                                        'color': 'transparent',
-                                        'weight': 0,
-                                        'opacity': 0.4,
-                                        'fillOpacity': 0.15
-                                    },
-                                    popup=folium.Popup(f"Land Cover: {row['class']}", parse_html=False)
-                                ).add_to(m)
+                            # Add land_cover polygons to map
+                            folium.GeoJson(
+                                land_cover_gdf,
+                                style_function=lambda x: {
+                                    'fillColor': get_land_cover_color(x),
+                                    'color': 'transparent',
+                                    'weight': 0,
+                                    'opacity': 0.4,
+                                    'fillOpacity': 0.15
+                                }
+                            ).add_to(m)
                             
                         else:
                             st.info(f"No land cover data found within {county} County")
@@ -707,21 +681,11 @@ if search_button:
                 except Exception as e:
                     st.error(f"Error loading land cover data: {str(e)}")
                 
-                # Add parcels with individual popups
-                for idx, row in gdf.iterrows():
-                    # Calculate parcel size in acres
-                    parcel_size_acres = row['area'] / 4046.86
-                    # Calculate distance in miles
-                    distance_miles = row['min_distance_substation'] / 1609.34
-                    
-                    folium.GeoJson(
-                        row.geometry,
-                        style_function=lambda x: {'fillColor': 'transparent', 'color': 'blue', 'weight': 2},
-                        popup=folium.Popup(
-                            f"Parcel Size: {parcel_size_acres:.1f} acres\nDistance to Substation: {distance_miles:.2f} miles",
-                            parse_html=False
-                        )
-                    ).add_to(m)
+                # Add parcels
+                folium.GeoJson(
+                    gdf, 
+                    style_function=lambda x: {'fillColor': 'transparent', 'color': 'blue', 'weight': 2}
+                ).add_to(m)
                 
                 # Add solar panel boundaries (only within selected county)
                 try:
@@ -764,8 +728,7 @@ if search_button:
                                     'weight': 2,
                                     'opacity': 0.8,
                                     'fillOpacity': 0.3
-                                },
-                                popup=folium.Popup("Solar Farm", parse_html=False)
+                                }
                             ).add_to(m)
                             
                         else:
@@ -798,8 +761,7 @@ if search_button:
                                     'weight': 2,
                                     'opacity': 0.8,
                                     'fillOpacity': 0.3
-                                },
-                                popup=folium.Popup("Solar Farm", parse_html=False)
+                                }
                             ).add_to(m)
                             
                     except Exception as e2:
