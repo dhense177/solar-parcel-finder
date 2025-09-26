@@ -374,7 +374,7 @@ def init_duckdb():
 @st.cache_data
 def get_counties():
     con = init_duckdb()
-    counties = ['Albany','Bronx','Cayuga','Chautauqua','Cortland','Genesee','Greene','Hamilton','Kings','Lewis','Livingston','Montgomery','New York','Oneida','Ontario','Orange','Oswego','Otsego','Putnam','Queens','Rensselaer','Richmond','Rockland','Schuyler','St Lawrence','Steuben','Sullivan','Tioga','Tompkins','Ulster','Warren','Wayne']
+    counties = ['Albany','Bronx','Cayuga','Chautauqua','Cortland','Genesee','Greene','Hamilton','Kings','Lewis','Livingston','Montgomery','New York','Oneida','Ontario','Oswego','Otsego','Putnam','Queens','Rensselaer','Richmond','Rockland','Schuyler','St Lawrence','Steuben','Sullivan','Tioga','Tompkins','Ulster','Warren','Wayne']
     return sorted(counties)
 
 
