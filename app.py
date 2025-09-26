@@ -354,16 +354,16 @@ def init_duckdb():
     con.execute("SET s3_region = 'eu-north-1'")
     
     # Configure S3 credentials
-    # access_key = st.secrets["aws"]["aws_access_key_id"]
-    # secret_key = st.secrets["aws"]["aws_secret_access_key"]
-    # region = st.secrets["aws"]["aws_region"]
+    access_key = st.secrets["aws"]["aws_access_key_id"]
+    secret_key = st.secrets["aws"]["aws_secret_access_key"]
+    region = st.secrets["aws"]["aws_region"]
 
     # Get credentials via boto3
-    session = boto3.Session()
-    credentials = session.get_credentials()
-    if credentials:
-        access_key = credentials.access_key
-        secret_key = credentials.secret_key
+    # session = boto3.Session()
+    # credentials = session.get_credentials()
+    # if credentials:
+    #     access_key = credentials.access_key
+    #     secret_key = credentials.secret_key
 
     con.execute(f"SET s3_access_key_id = '{access_key}'")
     con.execute(f"SET s3_secret_access_key = '{secret_key}'")
