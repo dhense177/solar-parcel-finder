@@ -39,12 +39,3 @@ ds.write_dataset(
     format="parquet",
     partitioning=["county_name"]
 )
-
-# ds.write_dataset(
-#     table,
-#     base_dir="data/parcel_data/ny_parcels/",
-#     format="parquet",
-#     partitioning=["county_name"]
-# )
-# ny_parcels.to_parquet('s3://solar-parcel-finder/data/parcels/ny_parcels.parquet')
-
