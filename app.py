@@ -753,7 +753,7 @@ if search_button:
                         solar_farms AS (
                             SELECT 
                                 ST_GeomFromText(geometry) AS geometry
-                            FROM read_parquet('data/parcel_data/solar_farms.parquet')
+                            FROM read_parquet('s3://solar-parcel-finder/data/parcels/solar_farms.parquet')
                         )
                         SELECT 
                             ST_AsText(s.geometry) AS geometry_wkt
@@ -793,7 +793,7 @@ if search_button:
                     try:
                         solar_query = """
                         SELECT geometry
-                        FROM read_parquet('data/parcel_data/solar_farms.parquet')
+                        FROM read_parquet('s3://solar-parcel-finder/data/parcels/solar_farms.parquet')
                         LIMIT 10
                         """
                         solar_df = con.execute(solar_query).fetchdf()
