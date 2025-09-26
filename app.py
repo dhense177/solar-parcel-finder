@@ -358,6 +358,13 @@ def init_duckdb():
     secret_key = st.secrets["aws"]["aws_secret_access_key"]
     region = st.secrets["aws"]["aws_region"]
 
+    # Get credentials via boto3
+    # session = boto3.Session()
+    # credentials = session.get_credentials()
+    # if credentials:
+    #     access_key = credentials.access_key
+    #     secret_key = credentials.secret_key
+
     con.execute(f"SET s3_access_key_id = '{access_key}'")
     con.execute(f"SET s3_secret_access_key = '{secret_key}'")
     
@@ -367,19 +374,9 @@ def init_duckdb():
 @st.cache_data
 def get_counties():
     con = init_duckdb()
-    try:
-        # Get counties from parcel data directory structure
-        import os
-        parcel_dir = 'data/parcel_data/ny_parcels'
-        if os.path.exists(parcel_dir):
-            counties = [d for d in os.listdir(parcel_dir) if os.path.isdir(os.path.join(parcel_dir, d))]
-            return sorted(counties)
-        else:
-            # Fallback counties if data not available
-            return ['Albany', 'Schenectady', 'Rensselaer', 'Saratoga', 'Warren']
-    except:
-        # Fallback counties if data not available
-        return ['Albany', 'Schenectady', 'Rensselaer', 'Saratoga', 'Warren']
+    counties = ['Albany','Bronx','Cayuga','Chautauqua','Cortland','Erie','Genesee','Greene','Hamilton','Kings','Lewis','Livingston','Montgomery','New York','Oneida','Onondaga','Ontario','Orange','Oswego','Otsego','Putnam','Queens','Rensselaer','Richmond','Rockland','Schuyler','St Lawrence','Steuben','Suffolk','Sullivan','Tioga','Tompkins','Ulster','Warren','Wayne','Westchester']
+    return sorted(counties)
+
 
 # Sidebar for controls
 st.sidebar.markdown("""
@@ -534,27 +531,6 @@ if search_button:
                 else:
                     st.warning(f"No county boundary found for {county}")
                     county_gdf = None
-                # except Exception as e:
-                #     st.error(f"Error loading county boundary: {str(e)}")
-                #     # Try alternative approach
-                #     try:
-                #         county_boundary_query = f"""
-                #         SELECT 
-                #             geometry,
-                #             NAME AS county_name
-                #         FROM read_parquet('data/boundaries_data/NYS_counties.parquet')
-                #         WHERE NAME = '{county}'
-                #         """
-                #         county_df = con.execute(county_boundary_query).fetchdf()
-                        
-                #         if len(county_df) > 0:
-                #             # Try to convert geometry directly
-                #             county_gdf = gpd.GeoDataFrame(county_df, geometry='geometry', crs='EPSG:4326')
-                #         else:
-                #             county_gdf = None
-                #     except Exception as e2:
-                #         st.error(f"Alternative method also failed: {str(e2)}")
-                #         county_gdf = None
                 
                 # Create map
                 if county_gdf is not None:
@@ -580,7 +556,7 @@ if search_button:
                             'weight': 3,
                             'opacity': 0.8
                         },
-                        popup=folium.Popup(f"<b>{county} County Boundary</b>", parse_html=True)
+                        popup=folium.Popup(f"{county} County Boundary", parse_html=False)
                     ).add_to(m)
                 
                 # Add landuse polygons (below parcels and solar farms)
@@ -640,7 +616,7 @@ if search_button:
                                         'opacity': 0.6,
                                         'fillOpacity': 0.3
                                     },
-                                    popup=folium.Popup(f"<b>Landuse Type:</b> {row['class']}", parse_html=True)
+                                    popup=folium.Popup(f"Landuse Type: {row['class']}", parse_html=False)
                                 ).add_to(m)
                             
                         else:
@@ -720,7 +696,7 @@ if search_button:
                                         'opacity': 0.4,
                                         'fillOpacity': 0.15
                                     },
-                                    popup=folium.Popup(f"<b>Land Cover:</b> {row['class']}", parse_html=True)
+                                    popup=folium.Popup(f"Land Cover: {row['class']}", parse_html=False)
                                 ).add_to(m)
                             
                         else:
@@ -731,11 +707,21 @@ if search_button:
                 except Exception as e:
                     st.error(f"Error loading land cover data: {str(e)}")
                 
-                # Add parcels
-                folium.GeoJson(
-                    gdf, 
-                    style_function=lambda x: {'fillColor': 'transparent', 'color': 'blue', 'weight': 2}
-                ).add_to(m)
+                # Add parcels with individual popups
+                for idx, row in gdf.iterrows():
+                    # Calculate parcel size in acres
+                    parcel_size_acres = row['area'] / 4046.86
+                    # Calculate distance in miles
+                    distance_miles = row['min_distance_substation'] / 1609.34
+                    
+                    folium.GeoJson(
+                        row.geometry,
+                        style_function=lambda x: {'fillColor': 'transparent', 'color': 'blue', 'weight': 2},
+                        popup=folium.Popup(
+                            f"Parcel Size: {parcel_size_acres:.1f} acres\nDistance to Substation: {distance_miles:.2f} miles",
+                            parse_html=False
+                        )
+                    ).add_to(m)
                 
                 # Add solar panel boundaries (only within selected county)
                 try:
@@ -779,7 +765,7 @@ if search_button:
                                     'opacity': 0.8,
                                     'fillOpacity': 0.3
                                 },
-                                popup=folium.Popup("Solar Farm", parse_html=True)
+                                popup=folium.Popup("Solar Farm", parse_html=False)
                             ).add_to(m)
                             
                         else:
@@ -813,11 +799,37 @@ if search_button:
                                     'opacity': 0.8,
                                     'fillOpacity': 0.3
                                 },
-                                popup=folium.Popup("Solar Farm", parse_html=True)
+                                popup=folium.Popup("Solar Farm", parse_html=False)
                             ).add_to(m)
                             
                     except Exception as e2:
                         st.error(f"Alternative method also failed: {str(e2)}")
+                
+                # Add legend to map
+                legend_html = '''
+                <div style="position: fixed; 
+                            top: 20px; right: 20px; width: 180px; height: 120px; 
+                            background-color: rgba(255, 255, 255, 0.95); 
+                            border: 2px solid #006419; border-radius: 12px; 
+                            z-index: 9999; font-size: 14px; padding: 12px;
+                            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                <p style="margin: 0 0 10px 0; font-weight: 600; color: #006419; font-size: 16px; text-align: center;">Legend</p>
+                <div style="display: flex; align-items: center; margin: 6px 0;">
+                    <div style="width: 16px; height: 16px; background-color: yellow; border: 2px solid orange; margin-right: 8px; border-radius: 2px;"></div>
+                    <span style="color: #1d1d1f;">Solar Sites</span>
+                </div>
+                <div style="display: flex; align-items: center; margin: 6px 0;">
+                    <div style="width: 16px; height: 16px; background-color: transparent; border: 2px solid blue; margin-right: 8px; border-radius: 2px;"></div>
+                    <span style="color: #1d1d1f;">Search Parcels</span>
+                </div>
+                <div style="display: flex; align-items: center; margin: 6px 0;">
+                    <div style="width: 16px; height: 16px; background-color: transparent; border: 3px solid #006419; margin-right: 8px; border-radius: 2px;"></div>
+                    <span style="color: #1d1d1f;">County Boundary</span>
+                </div>
+                </div>
+                '''
+                m.get_root().html.add_child(folium.Element(legend_html))
                 
                 # Save map to temporary file
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.html') as tmp_file:
@@ -958,13 +970,3 @@ else:
                 <p style="color: #006419; margin: 0; font-weight: 600;">{county}</p>
             </div>
             """, unsafe_allow_html=True)
-
-
-# CHATGPT PROMPTS
-# - Simplify the sidebar: use clean typography, neutral colors (white/gray/black), and one accent color (green) for actions like "Find Parcels."
-# - Replace bold neon greens and reds with subtle muted tones.
-# - Style sliders as thin lines with clean handles, showing numeric values clearly.
-# - Show metrics (Total Parcels, Average Area, Avg Distance) as light cards with subtle shadows, rounded corners, and minimalistic icons.
-# - Use large bold typography for key numbers (e.g., “32.3 acres”) and smaller light text for labels.
-# - Make the download buttons rounded, minimalist, and consistent with the overall design.
-# - Ensure everything feels clean, spacious, and easy to scan at a glance.
