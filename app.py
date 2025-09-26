@@ -402,6 +402,10 @@ search_button = st.sidebar.button("Find Parcels", type="primary")
 # Main content
 if search_button:
     with st.spinner("Searching for parcels..."):
+        # Add performance warning for large counties
+        if county in ['Erie', 'Suffolk', 'Nassau', 'Westchester', 'Monroe', 'Onondaga']:
+            st.info("⚠️ Large county detected. Results may be limited for performance.")
+        
         try:
             con = init_duckdb()
             
@@ -471,16 +475,65 @@ if search_button:
                  AND ST_Area(p.geometry) / (ST_Perimeter(p.geometry) * ST_Perimeter(p.geometry) / 16) > 0.3
 
                  -- Remove parcels where >50% is forest or wetland
-                 AND (
-                     SELECT COALESCE(SUM(ST_Area(ST_Intersection(ST_GeomFromText(p.geometry_display), lcr.geometry))), 0)
-                     FROM land_cover_removals lcr 
-                     WHERE ST_Intersects(ST_GeomFromText(p.geometry_display), lcr.geometry)
-                 ) / ST_Area(ST_GeomFromText(p.geometry_display)) <= 0.5
+                 -- AND (
+                     -- SELECT COALESCE(SUM(ST_Area(ST_Intersection(ST_GeomFromText(p.geometry_display), lcr.geometry))), 0)
+                     -- FROM land_cover_removals lcr 
+                     -- WHERE ST_Intersects(ST_GeomFromText(p.geometry_display), lcr.geometry)
+                 -- ) / ST_Area(ST_GeomFromText(p.geometry_display)) <= 0.5
                  GROUP BY p.county_name, p.geometry_display, i.geometry_display, p.area, p.geometry, l.class
+
+                 -- LIMIT TO PREVENT CRASHES
+                 LIMIT 1000
             """
             
-            # Execute query
-            df = con.execute(query).fetchdf()
+            # Execute query with timeout and error handling
+            import time
+            import threading
+            
+            def execute_query_with_timeout():
+                try:
+                    return con.execute(query).fetchdf()
+                except Exception as e:
+                    raise e
+            
+            # Create a thread to run the query
+            result_container = [None]
+            exception_container = [None]
+            
+            def run_query():
+                try:
+                    result_container[0] = execute_query_with_timeout()
+                except Exception as e:
+                    exception_container[0] = e
+            
+            # Start the query in a separate thread
+            query_thread = threading.Thread(target=run_query)
+            query_thread.daemon = True
+            query_thread.start()
+            
+            # Wait for the query to complete or timeout
+            start_time = time.time()
+            query_thread.join(timeout=20)
+            execution_time = time.time() - start_time
+            
+            # Check if query completed
+            if query_thread.is_alive():
+                st.error("⚠️ Query timeout (>20 seconds). Please try a new query")
+                st.stop()
+            
+            # Check if there was an exception
+            if exception_container[0] is not None:
+                st.error(f"Query failed: {str(exception_container[0])}")
+                st.info("Try reducing the search distance or increasing minimum parcel size.")
+                st.stop()
+            
+            # Check execution time
+            if execution_time > 20:
+                st.error("⚠️ Query took too long (>20 seconds). Please try a new query")
+                st.stop()
+            
+            # Get the result
+            df = result_container[0]
             
             # Remove duplicates
             df = df[df['parcel_geometry'].duplicated()==False].reset_index(drop=True)
