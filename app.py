@@ -357,11 +357,9 @@ def init_duckdb():
     access_key = st.secrets["aws"]["aws_access_key_id"]
     secret_key = st.secrets["aws"]["aws_secret_access_key"]
     region = st.secrets["aws"]["aws_region"]
-    
-    # Set environment variables for DuckDB
-    os.environ['AWS_ACCESS_KEY_ID'] = access_key
-    os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key
-    os.environ['AWS_DEFAULT_REGION'] = region
+
+    con.execute(f"SET s3_access_key_id = '{access_key}'")
+    con.execute(f"SET s3_secret_access_key = '{secret_key}'")
     
     return con
 
