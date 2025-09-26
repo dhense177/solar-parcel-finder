@@ -508,53 +508,53 @@ if search_button:
                 gdf = gpd.GeoDataFrame(df, geometry='geometry', crs='EPSG:4326')
                 
                 # Get county boundary
-                try:
-                    # First, let's check what columns are available
-                    debug_query = """
-                    SELECT * FROM read_parquet('data/boundaries_data/NYS_counties.parquet') LIMIT 1
-                    """
-                    debug_df = con.execute(debug_query).fetchdf()
-                    
-                    
-                    # Try different approaches for geometry conversion
-                    county_boundary_query = f"""
-                    SELECT 
-                        ST_AsText(geometry) AS geometry_wkt,
-                        NAME AS county_name
-                    FROM read_parquet('data/boundaries_data/NYS_counties.parquet')
-                    WHERE NAME = '{county}'
-                    """
-                    county_df = con.execute(county_boundary_query).fetchdf()
-                    
-                    
-                    if len(county_df) > 0:
-                        # Convert WKT to geometry
-                        county_df['geometry'] = county_df['geometry_wkt'].apply(wkt.loads)
-                        county_gdf = gpd.GeoDataFrame(county_df, geometry='geometry', crs='EPSG:4326')
-                    else:
-                        st.warning(f"No county boundary found for {county}")
-                        county_gdf = None
-                except Exception as e:
-                    st.error(f"Error loading county boundary: {str(e)}")
-                    # Try alternative approach
-                    try:
-                        county_boundary_query = f"""
-                        SELECT 
-                            geometry,
-                            NAME AS county_name
-                        FROM read_parquet('data/boundaries_data/NYS_counties.parquet')
-                        WHERE NAME = '{county}'
-                        """
-                        county_df = con.execute(county_boundary_query).fetchdf()
+                # try:
+                # # First, let's check what columns are available
+                # debug_query = """
+                # SELECT * FROM read_parquet('data/boundaries_data/NYS_counties.parquet') LIMIT 1
+                # """
+                # debug_df = con.execute(debug_query).fetchdf()
+                
+                
+                # Try different approaches for geometry conversion
+                county_boundary_query = f"""
+                SELECT 
+                    ST_AsText(geometry) AS geometry_wkt,
+                    NAME AS county_name
+                FROM read_parquet('s3://solar-parcel-finder/data/boundaries/NYS_counties.parquet')
+                WHERE NAME = '{county}'
+                """
+                county_df = con.execute(county_boundary_query).fetchdf()
+                
+                
+                if len(county_df) > 0:
+                    # Convert WKT to geometry
+                    county_df['geometry'] = county_df['geometry_wkt'].apply(wkt.loads)
+                    county_gdf = gpd.GeoDataFrame(county_df, geometry='geometry', crs='EPSG:4326')
+                else:
+                    st.warning(f"No county boundary found for {county}")
+                    county_gdf = None
+                # except Exception as e:
+                #     st.error(f"Error loading county boundary: {str(e)}")
+                #     # Try alternative approach
+                #     try:
+                #         county_boundary_query = f"""
+                #         SELECT 
+                #             geometry,
+                #             NAME AS county_name
+                #         FROM read_parquet('data/boundaries_data/NYS_counties.parquet')
+                #         WHERE NAME = '{county}'
+                #         """
+                #         county_df = con.execute(county_boundary_query).fetchdf()
                         
-                        if len(county_df) > 0:
-                            # Try to convert geometry directly
-                            county_gdf = gpd.GeoDataFrame(county_df, geometry='geometry', crs='EPSG:4326')
-                        else:
-                            county_gdf = None
-                    except Exception as e2:
-                        st.error(f"Alternative method also failed: {str(e2)}")
-                        county_gdf = None
+                #         if len(county_df) > 0:
+                #             # Try to convert geometry directly
+                #             county_gdf = gpd.GeoDataFrame(county_df, geometry='geometry', crs='EPSG:4326')
+                #         else:
+                #             county_gdf = None
+                #     except Exception as e2:
+                #         st.error(f"Alternative method also failed: {str(e2)}")
+                #         county_gdf = None
                 
                 # Create map
                 if county_gdf is not None:

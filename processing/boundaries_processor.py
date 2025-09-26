@@ -5,4 +5,4 @@ bd = gpd.read_file('data/boundaries_data/NYS_Civil_Boundaries/Counties.shp')
 
 bd = bd.to_crs('EPSG:4326')
 
-bd.to_parquet('data/boundaries_data/NYS_counties.parquet')
+bd.to_parquet('s3://solar-parcel-finder/data/boundaries/NYS_counties.parquet')
