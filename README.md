@@ -20,11 +20,11 @@ A web application for finding suitable parcels near substations for solar farms,
 
 ## Data Sources
 
-- New York State boundaries (https://gis.ny.gov/parcels)
-- New York State county boundaries (https://gis.ny.gov/civil-boundaries)
-- Solar Sites (https://www.transitionzero.org/products/solar-asset-mapper)
-- New York State Parcels (https://gis.ny.gov/parcels)
-- Overture Maps Geographic Data (https://docs.overturemaps.org/guides/)
+- [New York State boundaries](https://gis.ny.gov/parcels)
+- [New York State county boundaries](https://gis.ny.gov/civil-boundaries)
+- [Solar sites](https://www.transitionzero.org/products/solar-asset-mapper)
+- [New York State parcels](https://gis.ny.gov/parcels)
+- [Overture Maps geographic data](https://docs.overturemaps.org/guides/)
 
 
 ## App Deployment
