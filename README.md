@@ -26,6 +26,11 @@ A web application for finding suitable parcels near substations for solar farms,
 - [New York State parcels](https://gis.ny.gov/parcels)
 - [Overture Maps geographic data](https://docs.overturemaps.org/guides/)
 
+#### To Add:
+- [New York Protected Areas Database](https://www.nypad.org/)
+- [NYSERDA Solar Data](https://www.nyserda.ny.gov/All-Programs/NY-Sun/Solar-Data-Maps)
+- [National Solar Radiation Database](https://nsrdb.nrel.gov/)
+
 
 ## App Deployment
 
